@@ -12,7 +12,7 @@ I am using an esp32 developer module;
               yd lidar x4
 
 The ydlidar_arduino-master.zip file is the library that you will need to
-install manually for this to work. It's simple. Open the lidar*.ino in your
+install manually for this to work. It's simple. Open the lidar.ino in your
 arduino ide. Click on SKETCH, select Include Library> Add ZIP Library..., 
 navigate to where you saved the ydlidar_arduino-master.zip file and done!
 
