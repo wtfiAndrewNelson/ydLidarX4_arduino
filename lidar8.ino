@@ -1,13 +1,8 @@
 /*///////////////////////////////////////////////////////////////
 
  Using ESP32 for 2 serial ports (two different speeds)
- Now working and receiving data
- Added oled display
- Cleaned up
  Place dots every ~2* of data
-
- Removed - Refresh and display every three seconds and made 
-            the display cumulative
+ Make continuous sweep
 
  NOTE:  YDLidar library needs to have baud rate set to 128000 
         in zip file before adding to libraries
@@ -22,8 +17,8 @@ YDLidar lidar;
 
 bool isScanning = false;   
 
-#define YDLIDAR_MOTOR_SCTP 25 // lidar motor speed PWM pin
-#define YDLIDAR_MOTRO_EN   26 // lidar motor enable pin                  
+#define YDLIDAR_MOTOR_SCTP 25                 // lidar motor speed PWM pin
+#define YDLIDAR_MOTRO_EN   26                 // lidar motor enable pin                  
 //YD Lidar pre-setup end -------------------------------------
 
 
@@ -31,10 +26,10 @@ bool isScanning = false;
 #include <Adafruit_GFX.h>
 #include <Adafruit_SH110X.h>
 
-#define OLED_Address 0x3c         // initialize with the I2C addr 0x3C
-#define SCREEN_WIDTH 128          // OLED display width, in pixels
-#define SCREEN_HEIGHT 64          // OLED display height, in pixels
-#define OLED_RESET -1             //
+#define OLED_Address 0x3c                     // initialize with the I2C addr 0x3C
+#define SCREEN_WIDTH 128                      // OLED display width, in pixels
+#define SCREEN_HEIGHT 64                      // OLED display height, in pixels
+#define OLED_RESET -1
 
 Adafruit_SH1106G display = Adafruit_SH1106G(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 //OLED Display pre-setup end ---------------------------------
@@ -43,38 +38,14 @@ Adafruit_SH1106G display = Adafruit_SH1106G(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, 
 float screenX = 0;
 float screenY = 0;
 int screenZoom =125;
-
-/*
-int lidarDistance = 0;
-int lidarDirection = 0;
-float testN = 0;
-bool dotColor = true;
-*/
-
-/*
-// Three Second timer interrupt
-hw_timer_t * My_timer = NULL;
-volatile bool My_timerFlag = 0; 
-
-void IRAM_ATTR onTimer()
-{
-  My_timerFlag = 1;
-}
-*/
-
 float screenAngleI = 0;
 
-void setup() {
-/*
-  My_timer = timerBegin(0, 80, true);
-  timerAttachInterrupt(My_timer, &onTimer, true);
-  timerAlarmWrite(My_timer, 3000000, true);
-  timerAlarmEnable(My_timer);
-*/
+void setup()
+{
   //OLED Display
   Serial.begin(9600);
-  display.begin(OLED_Address, true);       // Address 0x3C default
-  display.display();                       // display Adafruit logo resident in memory
+  display.begin(OLED_Address, true);          // Address 0x3C default
+  display.display();                          // display Adafruit logo resident in memory
   //display.setTextWrap(false);
   //display.setTextSize(1);
   //display.setTextColor(SH110X_WHITE);
@@ -82,14 +53,10 @@ void setup() {
   display.clearDisplay();
   //display.display();
 
-
-  // YDLIDAR on arduino hardware serial2
-  lidar.begin(Serial2, 128000);
-  //output mode
+  
+  lidar.begin(Serial2, 128000);               // YDLIDAR on arduino hardware serial2
   pinMode(YDLIDAR_MOTOR_SCTP, OUTPUT);
   pinMode(YDLIDAR_MOTRO_EN, OUTPUT);
-
-  //while(Serial.read() >= 0){};    // why is this here?
 }
 
 void loop()
@@ -98,60 +65,40 @@ void loop()
   {
     if (lidar.waitScanDot() == RESULT_OK)
     {
-      float distance = lidar.getCurrentScanPoint().distance;  //distance in mm
-      float angle    = lidar.getCurrentScanPoint().angle;     //angle in degrees
-      byte  quality  = lidar.getCurrentScanPoint().quality;   //quality of the current measurement
-	    bool  startBit = lidar.getCurrentScanPoint().startBit;
-      if (distance > 120)
+      if (screenAngleI >= 360) screenAngleI = 0;
+      float distance = lidar.getCurrentScanPoint().distance;        //distance in mm
+      float angle    = lidar.getCurrentScanPoint().angle;           //angle in degrees
+      if (angle >= screenAngleI && angle < (screenAngleI + 0.1))
       {
-        for (screenAngleI = 0; screenAngleI < 360; screenAngleI = screenAngleI + 2)   // adjust increment with screenZoom
-        {
-          float distance = lidar.getCurrentScanPoint().distance;  //distance in mm
-          float angle    = lidar.getCurrentScanPoint().angle;     //angle in degrees
-          byte  quality  = lidar.getCurrentScanPoint().quality;   //quality of the current measurement
-	        bool  startBit = lidar.getCurrentScanPoint().startBit;
-          if (angle >= screenAngleI && angle < (screenAngleI + 0.1))
-          {
-            // write dots to screen
-            Serial.print("angle: ");
-            Serial.print(angle, DEC);
-            Serial.print("\t distance: ");
-            Serial.println(distance, DEC);
-            //display.display();
-            // plot on display
-            screenX = distance / screenZoom * cos(angle / 360 * 6.28) + 64;
-            screenY = distance / screenZoom * sin(angle / 360 * 6.28) + 32;
-            display.drawPixel(screenX, screenY, 1);
-            display.display();
-          }
-        }
-
-      }
-      //display.display();
-      //display.drawPixel(screenX, screenY, 0);
-
-      /*
-      if (My_timerFlag == 1)
-      {
-        My_timerFlag = 0;
+        // write dots to screen
+        Serial.print("angle: ");
+        Serial.print(angle, DEC);
+        Serial.print("\t distance: ");
+        Serial.println(distance, DEC);
+        //display.display();
+        // plot on display
+        if (distance < 150) distance = screenZoom * 32;
+        screenX = distance / screenZoom * cos(angle / 360 * 6.28) + 64;
+        screenY = distance / screenZoom * sin(angle / 360 * 6.28) + 32;
+        display.drawPixel(screenX, screenY, 1);
         display.display();
-        display.writeFillRect(0, 0, 128, 64, 0);
+        screenAngleI = screenAngleI + 2;
+      }      
+    }
+    else
+      {
+        Serial.println(" YDLIDAR get Scandata failed!!!");
       }
-      */
     }
-    else
-    {
-      Serial.println(" YDLIDAR get Scandata failed!!!");
-    }
-    }
-    else
+  else
     {
       //stop motor
-	    digitalWrite(YDLIDAR_MOTRO_EN, LOW);
-	    setMotorSpeed(0);
-	    restartScan();
+      digitalWrite(YDLIDAR_MOTRO_EN, LOW);
+      setMotorSpeed(0);
+      restartScan();
     }
 }
+
 
 void setMotorSpeed(float vol)
 {
