@@ -14,26 +14,31 @@
 
 ///////////////////////////////////////////////////////////////*/
  
+//YD Lidar pre-setup begin -----------------------------------
 #include <YDLidar.h>
 
-// You need to create an driver instance 
+// Create an driver instance 
 YDLidar lidar;
 
 bool isScanning = false;   
 
-#define YDLIDAR_MOTOR_SCTP 25 // The PWM pin for control the speed of YDLIDAR's motor. 
-#define YDLIDAR_MOTRO_EN   26 // The ENABLE PIN for YDLIDAR's motor                  
+#define YDLIDAR_MOTOR_SCTP 25 // lidar motor speed PWM pin
+#define YDLIDAR_MOTRO_EN   26 // lidar motor enable pin                  
+//YD Lidar pre-setup end -------------------------------------
 
+
+//OLED Display pre-setup begin -------------------------------
 #include <Adafruit_GFX.h>
 #include <Adafruit_SH110X.h>
 
-#define OLED_Address 0x3c          //initialize with the I2C addr 0x3C Typically eBay OLED's
+#define OLED_Address 0x3c          //initialize with the I2C addr 0x3C
 #define SCREEN_WIDTH 128          // OLED display width, in pixels
 #define SCREEN_HEIGHT 64          // OLED display height, in pixels
 #define OLED_RESET -1             //
 
 Adafruit_SH1106G display = Adafruit_SH1106G(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-//OLED Display pre-setup end -----------------------------------
+//OLED Display pre-setup end ---------------------------------
+
 
 float screenX = 0;
 float screenY = 0;
@@ -78,7 +83,7 @@ void setup() {
   //display.display();
 
 
-  // bind the YDLIDAR driver to the arduino hardware serial2
+  // YDLIDAR on arduino hardware serial2
   lidar.begin(Serial2, 128000);
   //output mode
   pinMode(YDLIDAR_MOTOR_SCTP, OUTPUT);
@@ -93,24 +98,24 @@ void loop()
   {
     if (lidar.waitScanDot() == RESULT_OK)
     {
-      float distance = lidar.getCurrentScanPoint().distance;  //distance value in mm unit
-      float angle    = lidar.getCurrentScanPoint().angle;     //anglue value in degree
+      float distance = lidar.getCurrentScanPoint().distance;  //distance in mm
+      float angle    = lidar.getCurrentScanPoint().angle;     //angle in degrees
       byte  quality  = lidar.getCurrentScanPoint().quality;   //quality of the current measurement
 	    bool  startBit = lidar.getCurrentScanPoint().startBit;
       if (distance > 120)
       {
         for (screenAngleI = 0; screenAngleI < 360; screenAngleI = screenAngleI + 2)   // adjust increment with screenZoom
         {
-          float distance = lidar.getCurrentScanPoint().distance;  //distance value in mm unit
-          float angle    = lidar.getCurrentScanPoint().angle;     //anglue value in degree
+          float distance = lidar.getCurrentScanPoint().distance;  //distance in mm
+          float angle    = lidar.getCurrentScanPoint().angle;     //angle in degrees
           byte  quality  = lidar.getCurrentScanPoint().quality;   //quality of the current measurement
 	        bool  startBit = lidar.getCurrentScanPoint().startBit;
           if (angle >= screenAngleI && angle < (screenAngleI + 0.1))
           {
             // write dots to screen
-            Serial.print("current angle:");
+            Serial.print("angle: ");
             Serial.print(angle, DEC);
-            Serial.print("\t current distance:");
+            Serial.print("\t distance: ");
             Serial.println(distance, DEC);
             //display.display();
             // plot on display
@@ -136,7 +141,7 @@ void loop()
     }
     else
     {
-      Serial.println(" YDLIDAR get Scandata fialed!!");
+      Serial.println(" YDLIDAR get Scandata failed!!!");
     }
     }
     else
@@ -238,12 +243,12 @@ void restartScan()
         //start motor in 1.8v
 		    setMotorSpeed(1.8);
 		    digitalWrite(YDLIDAR_MOTRO_EN, HIGH);
-        Serial.println("Now YDLIDAR is scanning ......");
+        Serial.println("YDLIDAR is scanning ......");
         //delay(1000);
       }
       else
       {
-        Serial.println("start YDLIDAR is failed!  Continue........");
+        Serial.println("start YDLIDAR failed!  Continue........");
       }
     }
     else
